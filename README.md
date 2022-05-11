@@ -1,4 +1,4 @@
-# Experiemental `aws s3` client  
+# Experiemental `aws s3` client using `actix-web`  
 
-## This is only for education purpose  
+## This is only for educational purpose
 
