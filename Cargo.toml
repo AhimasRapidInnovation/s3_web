@@ -1,0 +1,25 @@
+[package]
+name = "s3_web"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# rusoto_core = "0.48.0"
+# rusoto_credential = "0.48.0"
+# rusoto_s3 = "0.48.0"
+aws-config = "0.11.0"
+dotenv = "0.15.0"
+futures = "0.3"
+tokio = { version= "1.18.2", features=["full"]}
+aws-types = {version = "0.11.0", features=["hardcoded-credentials"]}
+aws-sdk-s3 = "0.11.0"
+serde = {version="1.0.137", features=["derive"]}
+argon2 = {version="0.4.0", features=["password-hash"]}
+secrecy = "0.8.0"
+sha3 ="*"
+uuid = "1.0.0"
+rand = "0.8.5"
+actix-session = {version="0.6.2", features=["cookie-session"]}
+actix-web = "4.0.1"
