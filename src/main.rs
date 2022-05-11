@@ -1,5 +1,4 @@
 
-extern crate s3_web;
 
 use dotenv::dotenv;
 use actix_web::{
@@ -10,7 +9,9 @@ use actix_web::{
 use actix_session::{SessionMiddleware, storage::CookieSessionStore, Session};
 use rand::RngCore;
 use cookie::Key;
-
+use actix_files::NamedFile;
+use actix_web::{HttpRequest, Result};
+use std::path::PathBuf;
 
 async fn s3_test(session: Session) -> String{
 
@@ -34,6 +35,11 @@ async fn index(session: Session) -> Result<&'static str, Box<dyn std::error::Err
 }
 
 
+async fn files(req: HttpRequest) -> Result<NamedFile> {
+    let path: PathBuf = req.match_info().query("filename").parse().unwrap();
+    Ok(NamedFile::open(path)?)
+}
+
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>>{
@@ -49,9 +55,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     let secret_key = Key::from(&random_key);
 
    let _ = HttpServer::new(move || {
+
         App::new()
             .app_data(web::Data::new(db.clone()))
             .wrap(SessionMiddleware::new(CookieSessionStore::default(), secret_key.clone()))
+            // .service()
+            // .route("/{filename:.*}", web::get().to(files))
             .route("/hello", web::get().to(s3_test))
             .route("/", web::get().to(index))
             .route("/login", web::get().to(s3_web::login_get))
