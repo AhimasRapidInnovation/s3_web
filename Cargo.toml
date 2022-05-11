@@ -25,3 +25,4 @@ actix-session = {version="0.6.2", features=["cookie-session"]}
 cookie = {version = "0.16.0", features=["signed"]}
 actix-web = "4.0.1"
 mongodb = "2.2.1"
+askama = "0.10"

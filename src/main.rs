@@ -54,6 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
             .wrap(SessionMiddleware::new(CookieSessionStore::default(), secret_key.clone()))
             .route("/hello", web::get().to(s3_test))
             .route("/", web::get().to(index))
+            .route("/login", web::get().to(s3_web::login_get))
             
     })
     .bind(("127.0.0.1", 8080))?
