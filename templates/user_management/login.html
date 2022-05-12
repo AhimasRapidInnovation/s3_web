@@ -45,28 +45,28 @@
         </form>
     </div>
     <div class="tab-pane fade" id="pills-register" role="tabpanel" aria-labelledby="tab-register">
-        <form>
+        <form method="post" action="/auth/signin">
             <!-- Username input -->
             <div class="form-outline mb-4">
-                <input type="text" id="registerUsername" class="form-control" />
-                <label class="form-label" for="registerUsername">Username</label>
+                <input type="text" id="user_name" name="user_name" class="form-control" />
+                <label class="form-label" for="user_name">Username</label>
             </div>
             <!-- Password input -->
             <div class="form-outline mb-4">
-                <input type="password" id="user_password" class="form-control" />
+                <input type="password" id="user_password" name="user_password" class="form-control" />
                 <label class="form-label" for="user_password">Password</label>
             </div>
             <!-- Repeat Password input -->
             <div class="form-outline mb-4">
-                <input type="password" id="confirm_password" class="form-control" />
+                <input type="password" id="confirm_password" name="confirm_password" class="form-control" />
                 <label class="form-label" for="confirm_password">Repeat password</label>
             </div>
             <div class="form-outline mb-4">
-                <input type="password" id="access_key_id" class="form-control" />
+                <input type="password" id="access_key_id" name="access_key_id" class="form-control" />
                 <label class="form-label" for="access_key_id">Access Key Id</label>
             </div>
             <div class="form-outline mb-4">
-                <input type="password" id="secret_key" class="form-control" />
+                <input type="password" id="secret_key" name="secret_key" class="form-control" />
                 <label class="form-label" for="secret_key">Secret Key</label>
             </div>
             <!-- Submit button -->

@@ -6,9 +6,7 @@ use mongodb::{
     Client, Database,
 };
 
-
-const DB_NAME : &str = "s3_web";
-
+const DB_NAME: &str = "s3_web";
 
 #[derive(Clone, Debug)]
 pub struct Conn(pub Database);
@@ -30,4 +28,3 @@ impl Deref for Conn {
         &self.0
     }
 }
-

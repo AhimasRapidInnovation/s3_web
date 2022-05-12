@@ -1,25 +1,17 @@
-
-
-use dotenv::dotenv;
-use actix_web::{
-    HttpServer,
-    App,
-    web,
-};
-use actix_session::{SessionMiddleware, storage::CookieSessionStore, Session};
-use rand::RngCore;
-use cookie::Key;
 use actix_files::NamedFile;
+use actix_session::{storage::CookieSessionStore, Session, SessionMiddleware};
+use actix_web::{web, App, HttpServer};
 use actix_web::{HttpRequest, Result};
+use cookie::Key;
+use dotenv::dotenv;
+use rand::RngCore;
 use std::path::PathBuf;
 
-async fn s3_test(session: Session) -> String{
-
+async fn s3_test(session: Session) -> String {
     let s = session.get::<i32>("counter");
-    println!("counter {:?}",s);
+    println!("counter {:?}", s);
     "Hello ".into()
 }
-
 
 async fn index(session: Session) -> Result<&'static str, Box<dyn std::error::Error>> {
     // access the session state
@@ -34,40 +26,34 @@ async fn index(session: Session) -> Result<&'static str, Box<dyn std::error::Err
     Ok("Welcome!")
 }
 
-
 async fn files(req: HttpRequest) -> Result<NamedFile> {
     let path: PathBuf = req.match_info().query("filename").parse().unwrap();
     Ok(NamedFile::open(path)?)
 }
 
-
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>>{
-
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
 
     // let secret_key = std::env::var(&"SESSION_SECRET_KEY").expect("Set session secret key");
     let mongo_uri = std::env::var("MONGO_URL")?;
     let db = s3_web::Conn::new(mongo_uri).await?;
-    let mut random_key = [0u8;64];
+    let mut random_key = [0u8; 64];
     // make sure your key cryptographically safe
     rand::thread_rng().fill_bytes(&mut random_key);
     let secret_key = Key::from(&random_key);
 
-   let _ = HttpServer::new(move || {
-
+    let _ = HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(db.clone()))
-            .wrap(SessionMiddleware::new(CookieSessionStore::default(), secret_key.clone()))
-            // .service()
-            // .route("/{filename:.*}", web::get().to(files))
-            .route("/hello", web::get().to(s3_test))
-            .route("/", web::get().to(index))
-            .route("/login", web::get().to(s3_web::login_get))
-            
+            .wrap(SessionMiddleware::new(
+                CookieSessionStore::default(),
+                secret_key.clone(),
+            ))
+            .service(s3_web::configure_auth())
     })
     .bind(("127.0.0.1", 8080))?
     .run()
     .await;
-  Ok(())
+    Ok(())
 }
