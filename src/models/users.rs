@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 // use actix_web::{FromRequest};
 
 pub(crate) const USER_TABLE: &str = "users";
+pub(crate) const SESSION_TABLE: &str = "session";
 
 fn password_to_phc(password: String) -> Result<String, Box<dyn std::error::Error>> {
     let salt = SaltString::generate(&mut rand::thread_rng());
@@ -24,7 +25,7 @@ fn password_to_phc(password: String) -> Result<String, Box<dyn std::error::Error
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct User {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
-    id: Option<ObjectId>,
+    pub id: Option<ObjectId>,
     name: String,
     access_key_id: String,
     secret_key: String,
@@ -79,5 +80,18 @@ impl From<SignInUser> for User {
             user.secret_key,
             user.user_password,
         )
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct SessionModel {
+    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
+    id: Option<ObjectId>,
+    user_id: String,
+}
+
+impl SessionModel {
+    pub(crate) fn new(user_id: String) -> Self {
+        Self { id: None, user_id }
     }
 }

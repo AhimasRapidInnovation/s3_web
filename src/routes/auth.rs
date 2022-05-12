@@ -1,7 +1,8 @@
 use crate::{
     db::Conn,
-    models::users::{SignInUser, User, USER_TABLE},
+    models::users::{SessionModel, SignInUser, User, SESSION_TABLE, USER_TABLE},
 };
+use actix_session::Session;
 use actix_web::{http::header::LOCATION, web, HttpResponse, Responder};
 use askama::Template;
 use futures::StreamExt;
@@ -56,13 +57,17 @@ pub(crate) async fn signin(conn: web::Data<Conn>, user: web::Form<SignInUser>) -
     }
     HttpResponse::Ok().finish()
 }
-pub(crate) async fn login(conn: web::Data<Conn>, user: web::Form<LoginUser>) -> impl Responder {
+pub(crate) async fn login(
+    conn: web::Data<Conn>,
+    user: web::Form<LoginUser>,
+    session: Session,
+) -> impl Responder {
     let LoginUser {
         user_name,
         password,
     } = user.into_inner();
 
-    let mut cur = conn
+    let cur = conn
         .collection::<User>(USER_TABLE)
         .find(doc! {"name":&user_name }, None)
         .await
@@ -76,15 +81,24 @@ pub(crate) async fn login(conn: web::Data<Conn>, user: web::Form<LoginUser>) -> 
     if db_user.len() != 1 {
         return HttpResponse::InternalServerError().finish();
     }
-
     let user = db_user[0].as_ref().unwrap();
     match user.verify_password(&password) {
         true => {
-            // TODO
-            // Create a session and add cookie
-            //Add cookie
-            //
             println!("Password matched");
+            let new_session = SessionModel::new(user.id.unwrap().to_hex());
+            match conn
+                .collection(SESSION_TABLE)
+                .insert_one(new_session, None)
+                .await
+            {
+                Ok(inserted) => {
+                    let _ = session.insert("session_id", inserted.inserted_id).unwrap();
+                    println!("Session inserted successfully");
+                }
+                Err(e) => {
+                    println!("Session error while inserting");
+                }
+            }
         }
         false => {
             println!("password is not matched");
