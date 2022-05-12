@@ -1,10 +1,14 @@
 use argon2::password_hash::{PasswordHash, PasswordVerifier, SaltString};
 use argon2::{Algorithm, Argon2, Params, PasswordHasher, Version};
+use mongodb::bson::oid::ObjectId;
 use secrecy::{ExposeSecret, Secret};
 use serde::{Deserialize, Serialize};
+
 // use actix_web::{FromRequest};
 
-pub fn my_password_hash(password: String) -> Result<String, Box<dyn std::error::Error>> {
+pub(crate) const USER_TABLE: &str = "users";
+
+fn password_to_phc(password: String) -> Result<String, Box<dyn std::error::Error>> {
     let salt = SaltString::generate(&mut rand::thread_rng());
     let hasher = Argon2::new(
         Algorithm::Argon2id,
@@ -13,24 +17,43 @@ pub fn my_password_hash(password: String) -> Result<String, Box<dyn std::error::
     );
     let password_hasher = hasher.hash_password(password.as_bytes(), &salt).unwrap();
 
-    println!("{:?}", password_hasher.encoding());
     let op = password_hasher.to_string();
     Ok(op)
 }
 
-pub fn decode_password_hash<'a>(password: &'a str) -> bool {
-    let ph = PasswordHash::new(password).unwrap();
-    Argon2::default()
-        .verify_password(password.as_bytes(), &ph)
-        .is_ok()
-}
-
 #[derive(Debug, Serialize, Deserialize)]
-pub struct User {
+pub(crate) struct User {
+    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
+    id: Option<ObjectId>,
     name: String,
     access_key_id: String,
     secret_key: String,
     password: String,
+}
+
+impl User {
+    pub(crate) fn new(
+        name: String,
+        access_key_id: String,
+        secret_key: String,
+        password: String,
+    ) -> Self {
+        let password = password_to_phc(password).unwrap();
+        Self {
+            id: Some(ObjectId::new()),
+            name,
+            access_key_id,
+            secret_key,
+            password,
+        }
+    }
+
+    pub(crate) fn verify_password<'a>(&self, password: &'a str) -> bool {
+        let ph = PasswordHash::new(&self.password).unwrap();
+        Argon2::default()
+            .verify_password(password.as_bytes(), &ph)
+            .is_ok()
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -40,4 +63,21 @@ pub(crate) struct SignInUser {
     confirm_password: String,
     access_key_id: String,
     secret_key: String,
+}
+
+impl SignInUser {
+    pub(crate) fn validate(&self) -> bool {
+        self.user_password == self.confirm_password
+    }
+}
+
+impl From<SignInUser> for User {
+    fn from(user: SignInUser) -> Self {
+        Self::new(
+            user.user_name,
+            user.access_key_id,
+            user.secret_key,
+            user.user_password,
+        )
+    }
 }

@@ -2,34 +2,12 @@ use actix_files::NamedFile;
 use actix_session::{storage::CookieSessionStore, Session, SessionMiddleware};
 use actix_web::{web, App, HttpServer};
 use actix_web::{HttpRequest, Result};
+use actix_web_flash_messages::storage::CookieMessageStore;
+use actix_web_flash_messages::FlashMessagesFramework;
 use cookie::Key;
 use dotenv::dotenv;
 use rand::RngCore;
 use std::path::PathBuf;
-
-async fn s3_test(session: Session) -> String {
-    let s = session.get::<i32>("counter");
-    println!("counter {:?}", s);
-    "Hello ".into()
-}
-
-async fn index(session: Session) -> Result<&'static str, Box<dyn std::error::Error>> {
-    // access the session state
-    if let Some(count) = session.get::<i32>("counter")? {
-        println!("SESSION value: {}", count);
-        // modify the session state
-        session.insert("counter", count + 1)?;
-    } else {
-        session.insert("counter", 1)?;
-    }
-
-    Ok("Welcome!")
-}
-
-async fn files(req: HttpRequest) -> Result<NamedFile> {
-    let path: PathBuf = req.match_info().query("filename").parse().unwrap();
-    Ok(NamedFile::open(path)?)
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -43,9 +21,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     rand::thread_rng().fill_bytes(&mut random_key);
     let secret_key = Key::from(&random_key);
 
+    let message_store = CookieMessageStore::builder(secret_key.clone()).build();
+
+    let message_framework = FlashMessagesFramework::builder(message_store).build();
+
     let _ = HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(db.clone()))
+            .wrap(message_framework.clone())
             .wrap(SessionMiddleware::new(
                 CookieSessionStore::default(),
                 secret_key.clone(),
