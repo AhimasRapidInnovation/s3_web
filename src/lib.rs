@@ -16,28 +16,21 @@ pub use routes::{configure_auth, configure_s3_service};
 
 pub const NAME: &str = "NAME";
 
-pub struct Client(Mutex<HashMap<String, S3Client>>);
-
-impl Deref for Client {
-    type Target = Mutex<HashMap<String, S3Client>>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+pub(crate) struct Client {
+    pub(crate) shared : Mutex<ClientInner>
 }
 
-impl DerefMut for Client {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
+struct ClientInner{
+    inner : HashMap<String, S3Client>
 }
 
-impl Client {
-    pub fn new() -> Mutex<HashMap<String, S3Client>> {
-        Mutex::new(HashMap::new())
+impl ClientInner {
+
+    fn new() -> Self {
+        Self {inner: HashMap::new()}
     }
 
-    async fn create_new(&mut self, 
+    fn create_new(&mut self, 
                         session_id: impl Into<String>, 
                         region: impl Into<String>,
                         access_key_id : impl Into<String>,
@@ -56,7 +49,26 @@ impl Client {
             .region(Region::new(region.into()))
             .build();
         let client = aws_sdk_s3::Client::new(&sdk);
-        let mut lock = self.0.lock().await;
-        (*lock).insert(session_id.into(), client);
+        self.inner.insert(session_id.into(), client);
+    }
+}
+
+impl Deref for Client {
+    type Target = Mutex<ClientInner>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.shared
+    }
+}
+
+impl DerefMut for Client {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.shared
+    }
+}
+
+impl Client {
+    pub fn new() -> Mutex<HashMap<String, S3Client>> {
+        Mutex::new(HashMap::new())
     }
 }

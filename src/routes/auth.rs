@@ -58,6 +58,8 @@ pub(crate) async fn signin(conn: web::Data<Conn>, user: web::Form<SignInUser>) -
     }
     HttpResponse::Ok().finish()
 }
+
+
 pub(crate) async fn login(
     conn: web::Data<Conn>,
     user: web::Form<LoginUser>,
@@ -70,6 +72,7 @@ pub(crate) async fn login(
         region,
     } = user.into_inner();
 
+    // let co = &conn;
     let cur = conn
         .collection::<User>(USER_TABLE)
         .find(doc! {"name":&user_name }, None)
@@ -98,9 +101,9 @@ pub(crate) async fn login(
                     let _ = session.insert("session_id", inserted.inserted_id.clone()).unwrap();
                     let session_id = inserted.inserted_id;
                     let s = session_id.as_str().unwrap();
-                    client.create_new(s, region).await;
-                    println!("Session inserted successfully");
-                    // create new s3 client instance for session Id 
+                    let mut c = client.lock().await;
+                    (*c).create_new(s, region, &user.access_key_id, &user.secret_key);
+                    println!("Session inserted successfully ok");
 
                 }
                 Err(e) => {

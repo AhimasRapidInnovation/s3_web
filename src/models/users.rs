@@ -3,6 +3,7 @@ use argon2::{Algorithm, Argon2, Params, PasswordHasher, Version};
 use mongodb::bson::oid::ObjectId;
 use secrecy::{ExposeSecret, Secret};
 use serde::{Deserialize, Serialize};
+use actix_web::{web};
 
 // use actix_web::{FromRequest};
 
@@ -26,10 +27,10 @@ fn password_to_phc(password: String) -> Result<String, Box<dyn std::error::Error
 pub(crate) struct User {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
-    name: String,
-    access_key_id: String,
-    secret_key: String,
-    password: String,
+    pub name: String,
+    pub access_key_id: String,
+    pub secret_key: String,
+    pub password: String,
 }
 
 impl User {
@@ -55,6 +56,11 @@ impl User {
             .verify_password(password.as_bytes(), &ph)
             .is_ok()
     }
+
+    // pub(crate) async fn get<'a>(conn: web::Data<crate::db::Conn> , name : &'a str) -> Self{
+
+        
+    // }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
