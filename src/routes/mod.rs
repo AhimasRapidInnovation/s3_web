@@ -10,8 +10,7 @@ pub fn configure_auth() -> Scope {
         .route("/login", web::post().to(auth::login))
 }
 
-pub fn configure_s3_service() -> Scope
-{
+pub fn configure_s3_service() -> Scope {
     web::scope("/s3")
         .route("", web::get().to(s3::s3_home))
         .route("/upload", web::post().to(s3::upload_file))

@@ -28,6 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _ = HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(db.clone()))
+            .app_data(web::Data::new(s3_web::Client::new()))
             .wrap(message_framework.clone())
             .wrap(SessionMiddleware::new(
                 CookieSessionStore::default(),

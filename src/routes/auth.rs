@@ -21,6 +21,7 @@ pub(crate) struct QueryParams {
 pub(crate) struct LoginUser {
     user_name: String,
     password: String,
+    region : String,
 }
 
 pub(crate) async fn auth_index(error: web::Query<QueryParams>) -> HttpResponse {
@@ -61,10 +62,12 @@ pub(crate) async fn login(
     conn: web::Data<Conn>,
     user: web::Form<LoginUser>,
     session: Session,
+    client : web::Data<crate::Client>
 ) -> impl Responder {
     let LoginUser {
         user_name,
         password,
+        region,
     } = user.into_inner();
 
     let cur = conn
@@ -92,8 +95,13 @@ pub(crate) async fn login(
                 .await
             {
                 Ok(inserted) => {
-                    let _ = session.insert("session_id", inserted.inserted_id).unwrap();
+                    let _ = session.insert("session_id", inserted.inserted_id.clone()).unwrap();
+                    let session_id = inserted.inserted_id;
+                    let s = session_id.as_str().unwrap();
+                    client.create_new(s, region).await;
                     println!("Session inserted successfully");
+                    // create new s3 client instance for session Id 
+
                 }
                 Err(e) => {
                     println!("Session error while inserting");
@@ -105,6 +113,6 @@ pub(crate) async fn login(
         }
     }
     HttpResponse::SeeOther()
-            .insert_header((LOCATION, "/s3"))
-            .finish()
+        .insert_header((LOCATION, "/s3"))
+        .finish()
 }
