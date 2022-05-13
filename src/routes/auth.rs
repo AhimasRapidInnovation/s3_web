@@ -21,7 +21,7 @@ pub(crate) struct QueryParams {
 pub(crate) struct LoginUser {
     user_name: String,
     password: String,
-    region : String,
+    region: String,
 }
 
 pub(crate) async fn auth_index(error: web::Query<QueryParams>) -> HttpResponse {
@@ -59,12 +59,11 @@ pub(crate) async fn signin(conn: web::Data<Conn>, user: web::Form<SignInUser>) -
     HttpResponse::Ok().finish()
 }
 
-
 pub(crate) async fn login(
     conn: web::Data<Conn>,
     user: web::Form<LoginUser>,
     session: Session,
-    client : web::Data<crate::Client>
+    client: web::Data<crate::Client>,
 ) -> impl Responder {
     let LoginUser {
         user_name,
@@ -98,13 +97,14 @@ pub(crate) async fn login(
                 .await
             {
                 Ok(inserted) => {
-                    let _ = session.insert("session_id", inserted.inserted_id.clone()).unwrap();
+                    let _ = session
+                        .insert("session_id", inserted.inserted_id.clone())
+                        .unwrap();
                     let session_id = inserted.inserted_id;
                     let s = session_id.as_str().unwrap();
                     let mut c = client.lock().await;
                     (*c).create_new(s, region, &user.access_key_id, &user.secret_key);
                     println!("Session inserted successfully ok");
-
                 }
                 Err(e) => {
                     println!("Session error while inserting");

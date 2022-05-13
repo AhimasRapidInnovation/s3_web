@@ -1,9 +1,9 @@
+use actix_web::web;
 use argon2::password_hash::{PasswordHash, PasswordVerifier, SaltString};
 use argon2::{Algorithm, Argon2, Params, PasswordHasher, Version};
 use mongodb::bson::oid::ObjectId;
 use secrecy::{ExposeSecret, Secret};
 use serde::{Deserialize, Serialize};
-use actix_web::{web};
 
 // use actix_web::{FromRequest};
 
@@ -59,7 +59,6 @@ impl User {
 
     // pub(crate) async fn get<'a>(conn: web::Data<crate::db::Conn> , name : &'a str) -> Self{
 
-        
     // }
 }
 
