@@ -104,5 +104,7 @@ pub(crate) async fn login(
             println!("password is not matched");
         }
     }
-    HttpResponse::Ok().finish()
+    HttpResponse::SeeOther()
+            .insert_header((LOCATION, "/s3"))
+            .finish()
 }

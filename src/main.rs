@@ -34,6 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 secret_key.clone(),
             ))
             .service(s3_web::configure_auth())
+            .service(s3_web::configure_s3_service())
     })
     .bind(("127.0.0.1", 8080))?
     .run()
