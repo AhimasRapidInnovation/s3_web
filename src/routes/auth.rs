@@ -70,7 +70,6 @@ pub(crate) async fn login(
         password,
         region,
     } = user.into_inner();
-
     // let co = &conn;
     let cur = conn
         .collection::<User>(USER_TABLE)
@@ -97,11 +96,10 @@ pub(crate) async fn login(
                 .await
             {
                 Ok(inserted) => {
-                    let _ = session
-                        .insert("session_id", inserted.inserted_id.clone())
-                        .unwrap();
+                    let session_insert = session
+                        .insert("session_id", inserted.inserted_id.clone().to_string());
                     let session_id = inserted.inserted_id;
-                    let s = session_id.as_str().unwrap();
+                    let s = session_id.to_string();
                     let mut c = client.lock().await;
                     (*c).create_new(s, region, &user.access_key_id, &user.secret_key);
                     println!("Session inserted successfully ok");

@@ -1,10 +1,9 @@
 #![allow(unused_attributes)]
 
-use actix_web::web;
 use aws_sdk_s3::Client as S3Client;
 use aws_types::credentials::{Credentials, SharedCredentialsProvider};
 use aws_types::{region::Region, sdk_config};
-use std::{collections::HashMap, hash::Hash};
+use std::{collections::HashMap};
 use tokio::sync::Mutex;
 pub mod db;
 pub mod models;
@@ -16,12 +15,14 @@ pub use routes::{configure_auth, configure_s3_service};
 
 pub const NAME: &str = "NAME";
 
-pub(crate) struct Client {
-    pub(crate) shared: Mutex<ClientInner>,
+#[derive(Debug)]
+pub struct Client {
+    pub shared: Mutex<ClientInner>,
 }
 
-struct ClientInner {
-    inner: HashMap<String, S3Client>,
+#[derive(Debug)]
+pub struct ClientInner {
+    pub inner: HashMap<String, S3Client>,
 }
 
 impl ClientInner {
@@ -50,6 +51,9 @@ impl ClientInner {
     }
 }
 
+
+
+
 impl Deref for Client {
     type Target = Mutex<ClientInner>;
 
@@ -65,7 +69,7 @@ impl DerefMut for Client {
 }
 
 impl Client {
-    pub fn new() -> Mutex<HashMap<String, S3Client>> {
-        Mutex::new(HashMap::new())
+    pub fn new() -> Self {
+        Self{ shared: Mutex::new(ClientInner::new())}
     }
 }

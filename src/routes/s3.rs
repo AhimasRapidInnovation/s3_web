@@ -10,15 +10,32 @@ use futures::StreamExt;
 
 #[derive(Template)]
 #[template(path = "s3/home.html")]
-pub(crate) struct S3Home;
+pub(crate) struct S3Home{
+    buckets : Vec<String>
+}
 
 #[derive(serde::Deserialize, Debug)]
 pub(crate) struct UploadForm {
     file_name: String,
 }
 
-pub(crate) async fn s3_home(session: Session) -> HttpResponse {
-    let home = S3Home {};
+pub(crate) async fn s3_home(session: Session, client : web::Data<crate::Client>) -> HttpResponse {
+    
+    let session_id = session.get::<String>("session_id").unwrap().unwrap();
+    println!("{:?} , {:?}", client, session_id);
+
+    let client_guard = client.lock().await;
+    let cl = client_guard.inner.get(&session_id).unwrap();
+    let resp = cl.list_buckets().send().await.unwrap();
+    let buckets = resp
+                                .buckets()
+                                .unwrap_or_default()
+                                .into_iter()
+                                .map(|buck| buck.name().unwrap().to_string())
+                                // .flatten()
+                                .collect::<Vec<String>>();
+    let num_buckets = buckets.len();
+    let home = S3Home {buckets : buckets}; 
     HttpResponse::Ok()
         .content_type("text/html")
         .body(home.render().unwrap())
