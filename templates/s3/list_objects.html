@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %} objects {% endblock %}
+
+
+{% block content%}
+
+<br />
+<div class="row">
+    <div class="col-3">
+        <button type="button" class="btn btn-primary" data-mdb-toggle="modal" data-mdb-target="#staticBackdrop">
+            Upload File
+        </button>
+
+    </div>
+</div>
+
+
+<!-- Modal -->
+<div class="modal fade" id="staticBackdrop" data-mdb-backdrop="static" data-mdb-keyboard="false" tabindex="-1"
+    aria-labelledby="staticBackdropLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="staticBackdropLabel">Upload File</h5>
+                <button type="button" class="btn-close" data-mdb-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                    <form method="post" enctype="multipart/form-data" action="/s3/upload">
+                        <div class="form-outline">
+                            <input type="text" id="bucket_name" name="bucket-name" value="{{ bucket_name }}" disabled class="form-control" />
+                            <label class="form-label" for="bucket_name" name="bucket-name" >Bucket Name</label>
+                        </div>
+                        <label class="form-label" for="s3-file">Upload File</label>
+                        <input type="file" class="form-control" id="s3-file" name="s3-file" />
+                        <br />
+                    </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-mdb-dismiss="modal">Close</button>
+                <button type="submit" class="btn btn-primary">Upload</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="col">#</th>
+            <th scope="col">Object Name</th>
+            <th scope="col">Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for name in objects%}
+        <tr>
+            <th scope="row">{{ loop.index }}</th>
+            <td>{{ name }}</td>
+            <td>
+                <a href="/s3/list_ojects/{{ name }}"> visit</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}
+

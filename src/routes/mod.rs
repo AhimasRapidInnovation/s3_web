@@ -14,4 +14,5 @@ pub fn configure_s3_service() -> Scope {
     web::scope("/s3")
         .route("", web::get().to(s3::s3_home))
         .route("/upload", web::post().to(s3::upload_file))
+        .route("/list_ojects/{bucket}", web::get().to(s3::list_objects))
 }

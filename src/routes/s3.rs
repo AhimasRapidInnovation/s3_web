@@ -14,6 +14,13 @@ pub(crate) struct S3Home{
     buckets : Vec<String>
 }
 
+#[derive(Template)]
+#[template(path = "s3/list_objects.html")]
+pub(crate) struct S3Objects{
+    objects : Vec<String>,
+}
+
+
 #[derive(serde::Deserialize, Debug)]
 pub(crate) struct UploadForm {
     file_name: String,
@@ -22,8 +29,6 @@ pub(crate) struct UploadForm {
 pub(crate) async fn s3_home(session: Session, client : web::Data<crate::Client>) -> HttpResponse {
     
     let session_id = session.get::<String>("session_id").unwrap().unwrap();
-    println!("{:?} , {:?}", client, session_id);
-
     let client_guard = client.lock().await;
     let cl = client_guard.inner.get(&session_id).unwrap();
     let resp = cl.list_buckets().send().await.unwrap();
@@ -63,4 +68,24 @@ pub(crate) async fn upload_file(mut payload: Multipart) -> HttpResponse {
         };
     }
     HttpResponse::Ok().finish()
+}
+
+
+pub(crate) async fn list_objects(query : web::Path<String>, session: Session, client : web::Data<crate::Client>) -> HttpResponse {
+
+    let bucket = query.into_inner();
+    let session_id = session.get::<String>("session_id").unwrap().unwrap();
+    let client_guard = client.lock().await;
+    let cl = client_guard.inner.get(&session_id).unwrap();
+    let objects = cl.list_objects_v2().bucket(bucket).send().await.unwrap();
+    let objs = objects
+                .contents()
+                .unwrap_or_default()
+                .iter()
+                .map(|obj|obj.key().unwrap().to_string())
+                .collect::<Vec<_>>();
+    let s3_objs = S3Objects{objects: objs};
+    HttpResponse::Ok()
+        .content_type("text/html")
+        .body(s3_objs.render().unwrap())
 }
