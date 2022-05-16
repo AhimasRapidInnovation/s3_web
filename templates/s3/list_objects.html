@@ -25,21 +25,21 @@
                 <h5 class="modal-title" id="staticBackdropLabel">Upload File</h5>
                 <button type="button" class="btn-close" data-mdb-dismiss="modal" aria-label="Close"></button>
             </div>
+            <form method="post" enctype="multipart/form-data" action="/s3/uploads3">
             <div class="modal-body">
-                    <form method="post" enctype="multipart/form-data" action="/s3/upload">
                         <div class="form-outline">
-                            <input type="text" id="bucket_name" name="bucket-name" value="{{ bucket_name }}" disabled class="form-control" />
-                            <label class="form-label" for="bucket_name" name="bucket-name" >Bucket Name</label>
+                            <input type="text" id="bucket-name" name="bucket_name" value="{{ bucket_name }}" class="form-control" />
+                            <label class="form-label" for="bucket-name" name="bucket-name" >Bucket Name</label>
                         </div>
                         <label class="form-label" for="s3-file">Upload File</label>
                         <input type="file" class="form-control" id="s3-file" name="s3-file" />
                         <br />
-                    </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-mdb-dismiss="modal">Close</button>
                 <button type="submit" class="btn btn-primary">Upload</button>
             </div>
+            </form>
         </div>
     </div>
 </div>

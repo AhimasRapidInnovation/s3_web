@@ -20,15 +20,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // make sure your key cryptographically safe
     rand::thread_rng().fill_bytes(&mut random_key);
     let secret_key = Key::from(&random_key);
-
     let message_store = CookieMessageStore::builder(secret_key.clone()).build();
-
     let message_framework = FlashMessagesFramework::builder(message_store).build();
-
+    let client = web::Data::new(s3_web::Client::new());
     let _ = HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(db.clone()))
-            .app_data(web::Data::new(s3_web::Client::new()))
+            .app_data(client.clone())
             .wrap(message_framework.clone())
             .wrap(SessionMiddleware::new(
                 CookieSessionStore::default(),
