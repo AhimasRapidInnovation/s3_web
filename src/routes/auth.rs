@@ -96,8 +96,8 @@ pub(crate) async fn login(
                 .await
             {
                 Ok(inserted) => {
-                    let session_insert = session
-                        .insert("session_id", inserted.inserted_id.clone().to_string());
+                    let session_insert =
+                        session.insert("session_id", inserted.inserted_id.clone().to_string());
                     let session_id = inserted.inserted_id;
                     let s = session_id.to_string();
                     let mut c = client.lock().await;

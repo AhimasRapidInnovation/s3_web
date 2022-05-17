@@ -3,7 +3,7 @@
 use aws_sdk_s3::Client as S3Client;
 use aws_types::credentials::{Credentials, SharedCredentialsProvider};
 use aws_types::{region::Region, sdk_config};
-use std::{collections::HashMap};
+use std::collections::HashMap;
 use tokio::sync::Mutex;
 pub mod db;
 pub mod models;
@@ -51,9 +51,6 @@ impl ClientInner {
     }
 }
 
-
-
-
 impl Deref for Client {
     type Target = Mutex<ClientInner>;
 
@@ -70,6 +67,8 @@ impl DerefMut for Client {
 
 impl Client {
     pub fn new() -> Self {
-        Self{ shared: Mutex::new(ClientInner::new())}
+        Self {
+            shared: Mutex::new(ClientInner::new()),
+        }
     }
 }

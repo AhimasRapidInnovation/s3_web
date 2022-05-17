@@ -1,28 +1,28 @@
-use std::{time::Duration, path::Path};
-use tokio::{fs::File, io::AsyncWriteExt};
 use actix_multipart::{Field, Multipart};
 use actix_session::Session;
-use actix_web::{http::header::{DispositionParam, ContentDisposition, DispositionType,  LOCATION}, web, HttpResponse};
+use actix_web::{
+    http::header::{ContentDisposition, DispositionParam, DispositionType, LOCATION},
+    web, HttpResponse,
+};
 use askama::Template;
-use futures::StreamExt;
 use aws_sdk_s3::presigning::config::PresigningConfig;
+use futures::StreamExt;
 use serde_json::json;
-
-
+use std::{path::Path, time::Duration};
+use tokio::{fs::File, io::AsyncWriteExt};
 
 #[derive(Template)]
 #[template(path = "s3/home.html")]
-pub(crate) struct S3Home{
-    buckets : Vec<String>
+pub(crate) struct S3Home {
+    buckets: Vec<String>,
 }
 
 #[derive(Template)]
 #[template(path = "s3/list_objects.html")]
-pub(crate) struct S3Objects{
-    objects : Vec<String>,
-    bucket_name : String,
+pub(crate) struct S3Objects {
+    objects: Vec<String>,
+    bucket_name: String,
 }
-
 
 #[derive(serde::Deserialize, Debug)]
 pub(crate) struct UploadForm {
@@ -30,30 +30,29 @@ pub(crate) struct UploadForm {
 }
 
 #[derive(serde:: Deserialize, Debug)]
-pub(crate) struct CreateBucketForm{
-    name : String,
+pub(crate) struct CreateBucketForm {
+    name: String,
 }
 
 #[derive(serde:: Deserialize, Debug)]
-pub(crate) struct DownloadObjQuery{
-    bucket_name : String,
-    file_name : String
+pub(crate) struct DownloadObjQuery {
+    bucket_name: String,
+    file_name: String,
 }
 
-pub(crate) async fn s3_home(session: Session, client : web::Data<crate::Client>) -> HttpResponse {
-    
+pub(crate) async fn s3_home(session: Session, client: web::Data<crate::Client>) -> HttpResponse {
     let session_id = session.get::<String>("session_id").unwrap().unwrap();
     let client_guard = client.lock().await;
     let cl = client_guard.inner.get(&session_id).unwrap();
     let resp = cl.list_buckets().send().await.unwrap();
     let buckets = resp
-                                .buckets()
-                                .unwrap_or_default()
-                                .into_iter()
-                                .map(|buck| buck.name().unwrap().to_string())
-                                // .flatten()
-                                .collect::<Vec<String>>();
-    let home = S3Home {buckets : buckets}; 
+        .buckets()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|buck| buck.name().unwrap().to_string())
+        // .flatten()
+        .collect::<Vec<String>>();
+    let home = S3Home { buckets: buckets };
     HttpResponse::Ok()
         .content_type("text/html")
         .body(home.render().unwrap())
@@ -83,30 +82,35 @@ pub(crate) async fn upload_file(mut payload: Multipart) -> HttpResponse {
     HttpResponse::Ok().finish()
 }
 
-
-pub(crate) async fn list_objects(query : web::Path<String>, session: Session, client : web::Data<crate::Client>) -> HttpResponse {
+pub(crate) async fn list_objects(
+    query: web::Path<String>,
+    session: Session,
+    client: web::Data<crate::Client>,
+) -> HttpResponse {
     let bucket = query.into_inner();
     let session_id = session.get::<String>("session_id").unwrap().unwrap();
-    println!("list_obj session_id {:?}" , session_id);
+    println!("list_obj session_id {:?}", session_id);
     let client_guard = client.lock().await;
     let cl = client_guard.inner.get(&session_id).unwrap();
     let objects = cl.list_objects_v2().bucket(&bucket).send().await.unwrap();
     let objs = objects
-                .contents()
-                .unwrap_or_default()
-                .iter()
-                .map(|obj|obj.key().unwrap().to_string())
-                .collect::<Vec<_>>();
-    let s3_objs = S3Objects{objects: objs, bucket_name: bucket};
+        .contents()
+        .unwrap_or_default()
+        .iter()
+        .map(|obj| obj.key().unwrap().to_string())
+        .collect::<Vec<_>>();
+    let s3_objs = S3Objects {
+        objects: objs,
+        bucket_name: bucket,
+    };
     println!("client after list obj {:?}", client_guard);
     HttpResponse::Ok()
         .content_type("text/html")
         .body(s3_objs.render().unwrap())
 }
 
-async fn read_string(mut field: Field) -> String
-{
-    let mut rv= String::new();
+async fn read_string(mut field: Field) -> String {
+    let mut rv = String::new();
     while let Some(chunk) = field.next().await {
         let bytes = chunk.unwrap();
         let new_str = String::from_utf8_lossy(&bytes);
@@ -116,7 +120,11 @@ async fn read_string(mut field: Field) -> String
 }
 
 async fn read_to_bytes(mut field: Field) -> (String, Vec<u8>) {
-    let file_name = field.content_disposition().get_filename().unwrap().to_string();
+    let file_name = field
+        .content_disposition()
+        .get_filename()
+        .unwrap()
+        .to_string();
     let mut rv = vec![];
     while let Some(chunk) = field.next().await {
         let _ = rv.extend(&chunk.unwrap());
@@ -124,10 +132,13 @@ async fn read_to_bytes(mut field: Field) -> (String, Vec<u8>) {
     (file_name, rv)
 }
 
-
-pub(crate) async fn upload_s3(mut payload: Multipart,session: Session, client : web::Data<crate::Client>) -> HttpResponse {
+pub(crate) async fn upload_s3(
+    mut payload: Multipart,
+    session: Session,
+    client: web::Data<crate::Client>,
+) -> HttpResponse {
     println!("calling upload_s3");
-    let mut  bucket_name = None;
+    let mut bucket_name = None;
     let mut field_item = None;
     let session_id = session.get::<String>("session_id").unwrap().unwrap();
     println!("Session ID {:?} ", session_id);
@@ -143,80 +154,86 @@ pub(crate) async fn upload_s3(mut payload: Multipart,session: Session, client : 
                 println!("reading s3 file");
                 field_item = Some(read_to_bytes(field).await);
                 println!("reading is done");
-            },
+            }
             Some("bucket_name") => {
                 println!("reading bucket_name");
                 let name = read_string(field).await;
                 println!("done with reading bucket_name");
                 bucket_name = Some(name);
-            },
-            Some(_) => {},
+            }
+            Some(_) => {}
             _ => {}
         };
     }
-    if field_item.is_some() && bucket_name.is_some(){
-            let (file_name, body) = field_item.unwrap();
-            let uploaded_res = cl
-                                        .put_object()
-                                        .bucket(bucket_name.unwrap())
-                                        .key(file_name)
-                                        .body(body.into())
-                                        .send()
-                                        .await;
-            println!("uploaded !!");
+    if field_item.is_some() && bucket_name.is_some() {
+        let (file_name, body) = field_item.unwrap();
+        let uploaded_res = cl
+            .put_object()
+            .bucket(bucket_name.unwrap())
+            .key(file_name)
+            .body(body.into())
+            .send()
+            .await;
+        println!("uploaded !!");
     }
     HttpResponse::Ok().finish()
 }
 
-pub(crate) async fn create_bucket(session: Session, form : web::Form<CreateBucketForm>, client: web::Data<crate::Client>) -> HttpResponse {
+pub(crate) async fn create_bucket(
+    session: Session,
+    form: web::Form<CreateBucketForm>,
+    client: web::Data<crate::Client>,
+) -> HttpResponse {
     let form = form.into_inner();
     let session_id = session.get::<String>("session_id").unwrap().unwrap();
     let client_guard = client.lock().await;
     let cl = client_guard.inner.get(&session_id).unwrap();
     match cl
-            .create_bucket()
-            // .create_bucket_configuration(cfg)
-            .bucket(form.name.as_str())
-            .send()
-            .await
-        {
-            Ok(res) => {
-                println!("bucket created successfully !");
-                HttpResponse::SeeOther()
-                    .insert_header((LOCATION, format!("/s3/list_ojects/{}", form.name)))
-                    .finish()
-            },
-            Err(err) => {
-                println!("bucket creation error {:?}", err);
-                HttpResponse::Conflict().finish()
-            }
+        .create_bucket()
+        // .create_bucket_configuration(cfg)
+        .bucket(form.name.as_str())
+        .send()
+        .await
+    {
+        Ok(res) => {
+            println!("bucket created successfully !");
+            HttpResponse::SeeOther()
+                .insert_header((LOCATION, format!("/s3/list_ojects/{}", form.name)))
+                .finish()
         }
-    
+        Err(err) => {
+            println!("bucket creation error {:?}", err);
+            HttpResponse::Conflict().finish()
+        }
+    }
 }
 
-pub (crate) async fn download_object(session: Session, query : web::Query<DownloadObjQuery>, client: web::Data<crate::Client>) -> HttpResponse 
-{
+pub(crate) async fn download_object(
+    session: Session,
+    query: web::Query<DownloadObjQuery>,
+    client: web::Data<crate::Client>,
+) -> HttpResponse {
     println!("at download object");
     let session_id = session.get::<String>("session_id").unwrap().unwrap();
     let client_guard = client.lock().await;
     let cl = client_guard.inner.get(&session_id).unwrap();
-    let DownloadObjQuery{bucket_name, file_name} = query.into_inner();
+    let DownloadObjQuery {
+        bucket_name,
+        file_name,
+    } = query.into_inner();
     let resp = cl
-            .get_object()
-            .bucket(bucket_name)
-            .key(file_name.clone())
-            .send()
-            .await
-            .unwrap();
+        .get_object()
+        .bucket(bucket_name)
+        .key(file_name.clone())
+        .send()
+        .await
+        .unwrap();
 
     let data = web::Bytes::from_iter(resp.body.collect().await.unwrap().into_bytes());
 
     let content_disposition = ContentDisposition {
-        disposition : DispositionType::Attachment,
-        parameters : vec![
-            DispositionParam::Filename(file_name),
-
-        ],
+        disposition: DispositionType::Attachment,
+        parameters: vec![DispositionParam::Filename(file_name)],
     };
     println!("sending the file");
     HttpResponse::Ok()
@@ -224,28 +241,31 @@ pub (crate) async fn download_object(session: Session, query : web::Query<Downlo
         .body(data)
 }
 
-pub (crate) async fn presigned_uri(session: Session, query : web::Query<DownloadObjQuery>, client: web::Data<crate::Client>) -> HttpResponse {
-
+pub(crate) async fn presigned_uri(
+    session: Session,
+    query: web::Query<DownloadObjQuery>,
+    client: web::Data<crate::Client>,
+) -> HttpResponse {
     println!("at download object");
     let session_id = session.get::<String>("session_id").unwrap().unwrap();
     let client_guard = client.lock().await;
     let cl = client_guard.inner.get(&session_id).unwrap();
-    let DownloadObjQuery{bucket_name, file_name} = query.into_inner();
+    let DownloadObjQuery {
+        bucket_name,
+        file_name,
+    } = query.into_inner();
     let resp = cl
-            .get_object()
-            .bucket(bucket_name)
-            .key(file_name.clone())
-            .presigned(
-                PresigningConfig::builder()
-                                        .expires_in(Duration::new(5 * 60 , 0))
-                                        .build()
-                                        .unwrap()
-            )
-            .await
-            .unwrap();
-
-    HttpResponse::Ok()
-        .json(
-            json!({"uri" : resp.uri().to_string()})
+        .get_object()
+        .bucket(bucket_name)
+        .key(file_name.clone())
+        .presigned(
+            PresigningConfig::builder()
+                .expires_in(Duration::new(5 * 60, 0))
+                .build()
+                .unwrap(),
         )
+        .await
+        .unwrap();
+
+    HttpResponse::Ok().json(json!({"uri" : resp.uri().to_string()}))
 }
