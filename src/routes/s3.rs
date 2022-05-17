@@ -4,7 +4,7 @@ use tokio::{fs::File, io::AsyncWriteExt};
 
 use actix_multipart::{Field, Multipart};
 use actix_session::Session;
-use actix_web::{http::header::{DispositionParam, LOCATION}, web, HttpResponse};
+use actix_web::{http::header::{DispositionParam, ContentDisposition, DispositionType,  LOCATION}, web, HttpResponse};
 use askama::Template;
 use futures::StreamExt;
 use aws_sdk_s3::model::{
@@ -36,6 +36,12 @@ pub(crate) struct UploadForm {
 #[derive(serde:: Deserialize, Debug)]
 pub(crate) struct CreateBucketForm{
     name : String,
+}
+
+#[derive(serde:: Deserialize, Debug)]
+pub(crate) struct DownloadObjQuery{
+    bucket_name : String,
+    file_name : String
 }
 
 pub(crate) async fn s3_home(session: Session, client : web::Data<crate::Client>) -> HttpResponse {
@@ -83,7 +89,6 @@ pub(crate) async fn upload_file(mut payload: Multipart) -> HttpResponse {
 
 
 pub(crate) async fn list_objects(query : web::Path<String>, session: Session, client : web::Data<crate::Client>) -> HttpResponse {
-
     let bucket = query.into_inner();
     let session_id = session.get::<String>("session_id").unwrap().unwrap();
     println!("list_obj session_id {:?}" , session_id);
@@ -191,4 +196,34 @@ pub(crate) async fn create_bucket(session: Session, form : web::Form<CreateBucke
             }
         }
     
+}
+
+pub (crate) async fn download_object(session: Session, query : web::Query<DownloadObjQuery>, client: web::Data<crate::Client>) -> HttpResponse 
+{
+    println!("at download object");
+    let session_id = session.get::<String>("session_id").unwrap().unwrap();
+    let client_guard = client.lock().await;
+    let cl = client_guard.inner.get(&session_id).unwrap();
+    let DownloadObjQuery{bucket_name, file_name} = query.into_inner();
+    let resp = cl
+            .get_object()
+            .bucket(bucket_name)
+            .key(file_name.clone())
+            .send()
+            .await
+            .unwrap();
+
+    let data = web::Bytes::from_iter(resp.body.collect().await.unwrap().into_bytes());
+
+    let content_disposition = ContentDisposition {
+        disposition : DispositionType::Attachment,
+        parameters : vec![
+            DispositionParam::Filename(file_name),
+
+        ],
+    };
+    println!("sending the file");
+    HttpResponse::Ok()
+        .insert_header(content_disposition)
+        .body(data)
 }

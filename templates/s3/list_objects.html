@@ -61,7 +61,7 @@
             <th scope="row">{{ loop.index }}</th>
             <td>{{ name }}</td>
             <td>
-                <a href="/s3/list_ojects/{{ name }}"> visit</a>
+                <a href="/s3/download_object?bucket_name={{ bucket_name }}&file_name={{ name }}"> download</a>
             </td>
         </tr>
         {% endfor %}
