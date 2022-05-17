@@ -1,16 +1,12 @@
-use std::path::Path;
-// use std::fs;
+use std::{time::Duration, path::Path};
 use tokio::{fs::File, io::AsyncWriteExt};
-
 use actix_multipart::{Field, Multipart};
 use actix_session::Session;
 use actix_web::{http::header::{DispositionParam, ContentDisposition, DispositionType,  LOCATION}, web, HttpResponse};
 use askama::Template;
 use futures::StreamExt;
-use aws_sdk_s3::model::{
-    BucketLocationConstraint,
-    CreateBucketConfiguration
-};
+use aws_sdk_s3::presigning::config::PresigningConfig;
+use serde_json::json;
 
 
 
@@ -226,4 +222,30 @@ pub (crate) async fn download_object(session: Session, query : web::Query<Downlo
     HttpResponse::Ok()
         .insert_header(content_disposition)
         .body(data)
+}
+
+pub (crate) async fn presigned_uri(session: Session, query : web::Query<DownloadObjQuery>, client: web::Data<crate::Client>) -> HttpResponse {
+
+    println!("at download object");
+    let session_id = session.get::<String>("session_id").unwrap().unwrap();
+    let client_guard = client.lock().await;
+    let cl = client_guard.inner.get(&session_id).unwrap();
+    let DownloadObjQuery{bucket_name, file_name} = query.into_inner();
+    let resp = cl
+            .get_object()
+            .bucket(bucket_name)
+            .key(file_name.clone())
+            .presigned(
+                PresigningConfig::builder()
+                                        .expires_in(Duration::new(5 * 60 , 0))
+                                        .build()
+                                        .unwrap()
+            )
+            .await
+            .unwrap();
+
+    HttpResponse::Ok()
+        .json(
+            json!({"uri" : resp.uri().to_string()})
+        )
 }

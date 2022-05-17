@@ -18,4 +18,5 @@ pub fn configure_s3_service() -> Scope {
         .route("/uploads3", web::post().to(s3::upload_s3))
         .route("/create_bucket", web::post().to(s3::create_bucket))
         .route("/download_object", web::get().to(s3::download_object))
+        .route("/presigned_uri", web::get().to(s3::presigned_uri))
 }

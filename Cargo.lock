@@ -2086,6 +2086,7 @@ dependencies = [
  "rand",
  "secrecy",
  "serde",
+ "serde_json",
  "sha3",
  "tokio",
  "urlencoding",
