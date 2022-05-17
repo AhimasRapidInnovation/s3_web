@@ -4,20 +4,53 @@
 
 
 {% block content%}
+<br />
 
-    <form method="post" enctype="multipart/form-data" action="/s3/upload">
-        <div class="form-outline">
-            <input type="text" id="form12" name="file_name" class="form-control" />
-            <label class="form-label" for="form12" name="file_name">Example label</label>
-        </div>
+<div class="row">
+    <div class="col-3">
+        <button type="button" class="btn btn-primary" data-mdb-toggle="modal" data-mdb-target="#staticBackdrop">
+            Create Bucket
+        </button>
 
-        <label class="form-label" for="s3-file">Upload File</label>
-        <input type="file" class="form-control" id="s3-file"  name="s3-file"/>
-        <br/>
-        <div class="col-4 text-center">
-            <button type="submit" class="btn btn-primary btn-block mb-3">Sign in</button>
+    </div>
+</div>
+
+
+<!-- Modal -->
+<div class="modal fade" id="staticBackdrop" data-mdb-backdrop="static" data-mdb-keyboard="false" tabindex="-1"
+    aria-labelledby="staticBackdropLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="staticBackdropLabel">Create Bucket</h5>
+                <button type="button" class="btn-close" data-mdb-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="/s3/create_bucket">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="form-outline">
+                            <input type="text" id="bucket-name" name="name" value="" class="form-control" />
+                            <label class="form-label" for="bucket-name" name="bucket-name">Bucket Name</label>
+                        </div>
+                    </div>
+                    <br />
+                    <div class="form-outline">
+                        <input type="text" id="bucket-region" name="region" value="" class="form-control" />
+                        <label class="form-label" for="bucket-name" name="region">Bucket Region</label>
+                    </div>
+
+                    <br />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-mdb-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Create</button>
+                </div>
+            </form>
         </div>
-    </form>
+    </div>
+</div>
+
+
 
     <table class="table">
         <thead>

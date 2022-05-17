@@ -4,9 +4,15 @@ use tokio::{fs::File, io::AsyncWriteExt};
 
 use actix_multipart::{Field, Multipart};
 use actix_session::Session;
-use actix_web::{http::header::DispositionParam, web, HttpResponse};
+use actix_web::{http::header::{DispositionParam, LOCATION}, web, HttpResponse};
 use askama::Template;
 use futures::StreamExt;
+use aws_sdk_s3::model::{
+    BucketLocationConstraint,
+    CreateBucketConfiguration
+};
+
+
 
 #[derive(Template)]
 #[template(path = "s3/home.html")]
@@ -27,6 +33,11 @@ pub(crate) struct UploadForm {
     file_name: String,
 }
 
+#[derive(serde:: Deserialize, Debug)]
+pub(crate) struct CreateBucketForm{
+    name : String,
+}
+
 pub(crate) async fn s3_home(session: Session, client : web::Data<crate::Client>) -> HttpResponse {
     
     let session_id = session.get::<String>("session_id").unwrap().unwrap();
@@ -40,7 +51,6 @@ pub(crate) async fn s3_home(session: Session, client : web::Data<crate::Client>)
                                 .map(|buck| buck.name().unwrap().to_string())
                                 // .flatten()
                                 .collect::<Vec<String>>();
-    let num_buckets = buckets.len();
     let home = S3Home {buckets : buckets}; 
     HttpResponse::Ok()
         .content_type("text/html")
@@ -155,4 +165,30 @@ pub(crate) async fn upload_s3(mut payload: Multipart,session: Session, client : 
             println!("uploaded !!");
     }
     HttpResponse::Ok().finish()
+}
+
+pub(crate) async fn create_bucket(session: Session, form : web::Form<CreateBucketForm>, client: web::Data<crate::Client>) -> HttpResponse {
+    let form = form.into_inner();
+    let session_id = session.get::<String>("session_id").unwrap().unwrap();
+    let client_guard = client.lock().await;
+    let cl = client_guard.inner.get(&session_id).unwrap();
+    match cl
+            .create_bucket()
+            // .create_bucket_configuration(cfg)
+            .bucket(form.name.as_str())
+            .send()
+            .await
+        {
+            Ok(res) => {
+                println!("bucket created successfully !");
+                HttpResponse::SeeOther()
+                    .insert_header((LOCATION, format!("/s3/list_ojects/{}", form.name)))
+                    .finish()
+            },
+            Err(err) => {
+                println!("bucket creation error {:?}", err);
+                HttpResponse::Conflict().finish()
+            }
+        }
+    
 }
